@@ -1,24 +1,24 @@
 {
-  "name": "gitlab-forever",
+  "name": "gitlab-deploy",
   "version": "0.1.0",
-  "description": "Run a Gitlab Webhook in front of Forever",
+  "description": "Automatic deployment server listening for Gitlab Webhooks",
   "bin": {
-    "gitlab-forever": "./lib/server.js"
+    "gitlab-deploy": "./lib/server.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jpillora/gitlab-forever"
+    "url": "https://github.com/jpillora/node-gitlab-deploy"
   },
   "author": "Jaime Pillora <dev@jpillora.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jpillora/gitlab-forever/issues"
+    "url": "https://github.com/jpillora/node-gitlab-deploy/issues"
   },
   "devDependencies": {},
   "dependencies": {
     "commander": "~2.1.0",
-    "forever": "~0.10.11",
     "mkdirp": "~0.3.5",
-    "gitlabhook": "0.0.8"
+    "level": "~0.18.0",
+    "rimraf": "~2.2.6"
   }
 }
