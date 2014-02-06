@@ -1,0 +1,24 @@
+{
+  "name": "gitlab-forever",
+  "version": "0.1.0",
+  "description": "Run a Gitlab Webhook in front of Forever",
+  "bin": {
+    "gitlab-forever": "./lib/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jpillora/gitlab-forever"
+  },
+  "author": "Jaime Pillora <dev@jpillora.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jpillora/gitlab-forever/issues"
+  },
+  "devDependencies": {},
+  "dependencies": {
+    "commander": "~2.1.0",
+    "forever": "~0.10.11",
+    "mkdirp": "~0.3.5",
+    "gitlabhook": "0.0.8"
+  }
+}
