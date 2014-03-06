@@ -18,7 +18,7 @@ Automatic deployment server listening for Gitlab Webhooks
       * Click "Test Hook"
 1. `gitlab-deploy` should receive the POST and begin deploying `foo`
 1. Confirm `foo-entry-file.js` is running
-1. Rerun `& gitlab-deploy --file` to background and log to file
+1. Rerun `gitlab-deploy --file &` to log to file and then place process in background
 
 ## Help
 

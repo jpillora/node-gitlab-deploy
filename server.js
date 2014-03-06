@@ -148,6 +148,8 @@ function reinstall(app, next) {
 }
 
 function start(app, next) {
+  app.start = true;
+
   var proc = app.proc = procs[app.name] = exec("node", [app.entry], { cwd: app.dir });
 
   proc.on("error", function(err) {
@@ -156,19 +158,27 @@ function start(app, next) {
 
   proc.on("exit", function(code) {
     app.proc = procs[app.name] = null;
+    if(app.start) {
+      // TOOD try to stop infinite instant restarts
+      // app.crash = app.crash ? 1 : app.crash+1;
+      start(app, function(err) {
+        log(">> restarted '%s'", app.name);
+      });
+    }
   });
 
   proc.stdout.on('data', function(buff) {
-    log(">> application log: %s:", app.name, buff.toString());
+    log(">> '%s': %s", app.name, buff.toString());
   });
   proc.stderr.on('data', function(buff) {
-    error(">> application error: %s:", app.name, buff.toString());
+    error(">> '%s': %s", app.name, buff.toString());
   });
 
   next(null);
 }
 
 function stop(app, next) {
+  app.start = false;
   if(!app.proc)
     return next(null);
   app.proc.kill('SIGHUP');
