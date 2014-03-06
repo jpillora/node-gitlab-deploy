@@ -15,6 +15,7 @@ program
   .option('-f, --file', 'Write to log.txt and err.txt instead of stdouterr')
   .option('-h, --host [ip]', 'Host [ip] to bind on', "0.0.0.0")
   .option('-p, --port [number]', 'Port [number] to listen on', 3240)
+  .option('--clean-install', 'Delete old "node_modules" before "npm install"ing')
   .option('--wipe-app [app]', 'Wipe one application')
   .option('--wipe-all', 'Wipe everything')
   .parse(process.argv);
@@ -120,6 +121,10 @@ function onHook(app) {
 function reinstall(app, next) {
 
   function install() {
+
+    if(program.cleanInstall)
+      rimraf.sync(path.join(app.dir, 'node_modules'));
+
     exec("npm", ["install"], { cwd: app.dir }).on("exit", function(code) {
       if(code !== 0) return next("npm install error");
       next();
