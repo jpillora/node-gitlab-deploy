@@ -150,7 +150,6 @@ function reinstall(app, next) {
 }
 
 function start(app, next) {
-  app.start = true;
 
   var proc = app.proc = procs[app.name] = exec("node", [app.entry], { cwd: app.dir });
 
@@ -158,33 +157,33 @@ function start(app, next) {
     error("app error: %s: %s", app.name, err);
   });
 
-  proc.on("exit", function(code) {
+  proc.once("exit", function(code) {
+    console.log("> %s exited with %s", app.name, code || 0);
     app.proc = procs[app.name] = null;
-    if(app.start) {
+    // if(app.start) {
       // TOOD try to stop infinite instant restarts
       // app.crash = app.crash ? 1 : app.crash+1;
-      start(app, function(err) {
-        log(">> restarted '%s'", app.name);
-      });
-    }
+    //   log(">> restarting '%s'...", app.name);
+    //   start(app, function(err) {});
+    // }
   });
 
   proc.stdout.on('data', function(buff) {
-    log(">> '%s': %s", app.name, buff.toString());
+    log("> %s: %s", app.name, buff.toString().replace(/\n$/, ''));
   });
   proc.stderr.on('data', function(buff) {
-    error(">> '%s': %s", app.name, buff.toString());
+    error("> %s: %s", app.name, buff.toString().replace(/\n$/, ''));
   });
 
   next(null);
 }
 
 function stop(app, next) {
-  app.start = false;
   if(!app.proc)
     return next(null);
+  log(">> sent '%s' SIGHUP", app.name);
   app.proc.kill('SIGHUP');
-  app.proc.on("exit", function() {
+  app.proc.once("exit", function() {
     next(null);
   });
 }
@@ -195,10 +194,10 @@ function exec(file, args, opts) {
     if(opts.cwd)
       extra = util.format(" (from '%s')", opts.cwd);
   var str = file + " " + args.join(" ");
-  log(">> start '%s'%s", str, extra);
+  log(">> '%s' executing%s", str, extra);
   var proc = execFile.apply(null, arguments);
-  proc.on("exit", function(code) {
-    log(">> stop '%s' with: %s", str, code || '<no-code>');
+  proc.once("exit", function(code) {
+    log(">> '%s' exited with %s", str, code || 0);
   });
   return proc;
 }
