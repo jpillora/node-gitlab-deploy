@@ -12,7 +12,7 @@ var util = require('util');
 program
   .version(pkg.version)
   .usage('[options]')
-  .option('-f, --file', 'Write to log.txt and err.txt instead of stdouterr')
+  .option('-f, --file', 'Write to deploy.txt instead of stdouterr')
   .option('-h, --host [ip]', 'Host [ip] to bind on', "0.0.0.0")
   .option('-p, --port [number]', 'Port [number] to listen on', 3240)
   .option('--clean-install', 'Delete old "node_modules" before "npm install"ing')
@@ -31,6 +31,8 @@ require('logbook').configure({
   file: {
     log: program.file,
     err: program.file,
+    logPath: './deploy.txt',
+    errPath: './deploy.txt',
     timestamps: true,
     typestamps: false
   }
@@ -202,7 +204,6 @@ function exec(file, args, opts) {
 }
 
 function log() {
-  if(!program.debug) return;
   console.log.apply(console, arguments);
 }
 
