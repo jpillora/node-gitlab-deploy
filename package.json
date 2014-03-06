@@ -1,9 +1,9 @@
 {
   "name": "gitlab-deploy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Automatic deployment server listening for Gitlab Webhooks",
   "bin": {
-    "gitlab-deploy": "./lib/server.js"
+    "gitlab-deploy": "./server.js"
   },
   "repository": {
     "type": "git",
@@ -19,6 +19,7 @@
     "commander": "~2.1.0",
     "mkdirp": "~0.3.5",
     "level": "~0.18.0",
-    "rimraf": "~2.2.6"
+    "rimraf": "~2.2.6",
+    "logbook": "^0.7.0"
   }
 }

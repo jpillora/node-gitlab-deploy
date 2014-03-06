@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-var pkg = require('../package.json');
+var pkg = require('./package.json');
 var execFile = require('child_process').execFile;
 var fs = require('fs');
 var path = require('path');
@@ -7,25 +7,47 @@ var program = require('commander');
 var mkdirp = require('mkdirp');
 var rimraf = require('rimraf');
 var util = require('util');
-var root = path.join(__dirname, "..");
 
 //parse args
 program
   .version(pkg.version)
   .usage('[options]')
-  .option('-d, --debug', 'Enable debugging')
+  .option('-f, --file', 'Write to log.txt and err.txt instead of stdouterr')
   .option('-h, --host [ip]', 'Host [ip] to bind on', "0.0.0.0")
   .option('-p, --port [number]', 'Port [number] to listen on', 3240)
-  .option('-w, --wipe', 'Wipe all stored data (application meta data and repositories)')
+  .option('--wipe-app [app]', 'Wipe one application')
+  .option('--wipe-all', 'Wipe everything')
   .parse(process.argv);
 
-var DB_DIR = path.join(root, 'database');
+//logging
+require('logbook').configure({
+  console: {
+    log: !program.file,
+    err: !program.file,
+    timestamps: true,
+    typestamps: true
+  },
+  file: {
+    log: program.file,
+    err: program.file,
+    timestamps: true,
+    typestamps: false
+  }
+});
+
+var DB_DIR = path.join(__dirname, 'database');
 var db = require('level')(DB_DIR, { valueEncoding: 'json' });
 
-var REPOS_DIR = path.join(root, 'repos');
+var REPOS_DIR = path.join(__dirname, 'repos');
 mkdirp.sync(REPOS_DIR);
 
-if(program.wipe) {
+if(program.wipeApp) {
+  var app = program.wipeApp;
+  db.del(app);
+  rimraf.sync(path.join(REPOS_DIR, app));
+  info("Wiped '%s'", app);
+  process.exit(1);
+} else if(program.wipeAll) {
   rimraf.sync(DB_DIR);
   rimraf.sync(REPOS_DIR);
   info("Wiped all deployment data");
