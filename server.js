@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 var pkg = require('./package.json');
 var execFile = require('child_process').execFile;
+var fork = require('child_process').fork;
 var fs = require('fs');
 var path = require('path');
 var program = require('commander');
@@ -12,13 +13,17 @@ var util = require('util');
 program
   .version(pkg.version)
   .usage('[options]')
-  .option('-f, --file', 'Write to deploy.txt instead of stdouterr')
+  .option('-f, --file [file]', 'Write to [file] instead of std out/err (defaults to ./deploy.txt)')
   .option('-h, --host [ip]', 'Host [ip] to bind on', "0.0.0.0")
   .option('-p, --port [number]', 'Port [number] to listen on', 3240)
   .option('--clean-install', 'Delete old "node_modules" before "npm install"ing')
   .option('--wipe-app [app]', 'Wipe one application')
   .option('--wipe-all', 'Wipe everything')
   .parse(process.argv);
+
+//apply default
+if(program.file === true)
+  program.file = './deploy.txt';
 
 //logging
 require('logbook').configure({
@@ -29,10 +34,10 @@ require('logbook').configure({
     typestamps: true
   },
   file: {
-    log: program.file,
-    err: program.file,
-    logPath: './deploy.txt',
-    errPath: './deploy.txt',
+    log: !!program.file,
+    err: !!program.file,
+    logPath: program.file,
+    errPath: program.file,
     timestamps: true,
     typestamps: false
   }
@@ -127,23 +132,23 @@ function reinstall(app, next) {
     if(program.cleanInstall)
       rimraf.sync(path.join(app.dir, 'node_modules'));
 
-    exec("npm", ["install"], { cwd: app.dir }).on("exit", function(code) {
-      if(code !== 0) return next("npm install error");
+    exec("npm", ["install"], { cwd: app.dir }, function(err) {
+      if(err) return next("npm install error: " + err);
       next();
     });
   }
 
   if(fs.existsSync(app.dir)) {
-    exec("git", ["fetch", "--all"], { cwd: app.dir }).on("exit", function(code) {
-      if(code !== 0) return next("git fetch error");
-      exec("git", ["reset","--hard","origin/master"], { cwd: app.dir }).on("exit", function(code) {
-        if(code !== 0) return next("git reset error");
+    exec("git", ["fetch", "--all"], { cwd: app.dir }, function(err) {
+      if(err) return next("git fetch error: " + err);
+      exec("git", ["reset","--hard","origin/master"], { cwd: app.dir }, function(err) {
+        if(err) return next("git reset error: " + err);
         install();
       });
     });
   } else {
-    exec("git", ["clone", app.git, app.dir]).on("exit", function(code) {
-      if(code !== 0) return next("git clone error");
+    exec("git", ["clone", app.git, app.dir], function(err) {
+      if(err) return next("git clone error: " + err);
       install();
     });
   }
@@ -151,28 +156,32 @@ function reinstall(app, next) {
 
 function start(app, next) {
 
-  var proc = app.proc = procs[app.name] = exec("node", [app.entry], { cwd: app.dir });
+  log("[ gitlab-deploy ] starting app '%s'", app.name);
+  var proc = app.proc = procs[app.name] = fork(app.entry, {
+    cwd: app.dir,
+    silent: true
+  });
+
+  proc.stdout.on('data', function(buff) {
+    log("[ %s ] %s", app.name, buff.toString().replace(/\n$/, ''));
+  });
+  proc.stderr.on('data', function(buff) {
+    error("[ %s ] %s", app.name, buff.toString().replace(/\n$/, ''));
+  });
 
   proc.on("error", function(err) {
     error("app error: %s: %s", app.name, err);
   });
 
   proc.once("exit", function(code) {
-    console.log("> %s exited with %s", app.name, code || 0);
+    log("[ gitlab-deploy ] exited app '%s' with %s", app.name, code || 0);
     app.proc = procs[app.name] = null;
     // if(app.start) {
       // TOOD try to stop infinite instant restarts
       // app.crash = app.crash ? 1 : app.crash+1;
-    //   log(">> restarting '%s'...", app.name);
+    //   log("[ gitlab-deploy ] restarting '%s'...", app.name);
     //   start(app, function(err) {});
     // }
-  });
-
-  proc.stdout.on('data', function(buff) {
-    log("> %s: %s", app.name, buff.toString().replace(/\n$/, ''));
-  });
-  proc.stderr.on('data', function(buff) {
-    error("> %s: %s", app.name, buff.toString().replace(/\n$/, ''));
   });
 
   next(null);
@@ -181,7 +190,7 @@ function start(app, next) {
 function stop(app, next) {
   if(!app.proc)
     return next(null);
-  log(">> sent '%s' SIGHUP", app.name);
+  log("[ gitlab-deploy ] sent '%s' SIGHUP", app.name);
   app.proc.kill('SIGHUP');
   app.proc.once("exit", function() {
     next(null);
@@ -194,12 +203,8 @@ function exec(file, args, opts) {
     if(opts.cwd)
       extra = util.format(" (from '%s')", opts.cwd);
   var str = file + " " + args.join(" ");
-  log(">> '%s' executing%s", str, extra);
-  var proc = execFile.apply(null, arguments);
-  proc.once("exit", function(code) {
-    log(">> '%s' exited with %s", str, code || 0);
-  });
-  return proc;
+  log("[ gitlab-deploy ] '%s' executing%s", str, extra);
+  execFile.apply(null, arguments);
 }
 
 function log() {
